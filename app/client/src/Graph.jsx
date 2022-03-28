@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import Button from 'react-bootstrap/Button';
+import { PlaceholderButton } from 'react-bootstrap';
 
 const Graph = (props) => {
   useEffect(() => {
@@ -15,6 +16,7 @@ const Graph = (props) => {
           'April',
           'May',
           'June',
+          'July',
           'August',
           'September',
           'October'
@@ -34,9 +36,17 @@ const Graph = (props) => {
         }
       }
     })
+    props.poll(myChart);
     }, []);
 
-  
+
+    // function addData(myChart, label, data) {
+    //   //chart.data.labels.push(label);
+    //   myChart.data.datasets.forEach((dataset) => {
+    //       dataset.data.push(data);
+    //   });
+    //   chart.update();
+    // }
 
     const handleUpperChange = (event) => {
       props.changeThreshUpper(event.target.value);

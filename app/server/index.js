@@ -12,7 +12,7 @@ let upperTemp = 20;
 let lowerTemp = 0;
 
 app.get('/test', (req, res) => {
-  Temps.find().then((data) => res.send(data));
+  Temps.find().sort({_id:-1}).limit(10).then((data) => res.send(data.reverse()));
 });
 
 app.post('/thresh', (req, res) => {
@@ -27,7 +27,7 @@ app.post('/thresh', (req, res) => {
       lowerTemp = req.query.value;
   }
   // threshUpper = req.query.threshUpper;
-  res.send(lowerTemp.toString());
+  res.sendStatus();
 });
 
 app.listen(PORT, () => (console.log(`Currently running on port: ${PORT}`)));

@@ -4,6 +4,7 @@ import Graph from './Graph.jsx';
 import axios from 'axios';
 
 
+
 const App = () => {
   const [temps, changeTemps] = useState([]);
   const [threshUpper, changeThreshUpper] = useState(10);
@@ -12,23 +13,34 @@ const App = () => {
 
   useEffect(() => {
     axios.get('/test').then(res => { 
-      changeTemps(res.data.map((val) => val.value)) 
-      
+      changeTemps(res.data.map((val) => val.value));
     });
   }, []);
+
+  function poll(chart) {
+    setInterval(() => {
+      axios.get('/test').then(res => {
+        changeTemps(res.data.map((val) => val.value));
+        chart.data.datasets.forEach((dataset) => {
+          dataset.data = res.data.map((val) => val.value);
+      });
+      });
+      console.log('poll');
+      
+      chart.update();
+    }, 10000);
+  }
 
   useEffect(() => {
     checkThreshold(threshUpper, threshLower, temps[temps.length - 1]);
   }, [temps]);
 
+  const checkThreshold = (upperLimit, lowerLimit, value) => {
+    (value > upperLimit || value < lowerLimit) ? changeWithinThreshold(false) : changeWithinThreshold(true);
+}
 
   const [show, setShow] = useState(true);
   const toggleSetShow = () => setShow(!show);
-
-  const checkThreshold = (upperLimit, lowerLimit, value) => {
-      (value > upperLimit || value < lowerLimit) ? changeWithinThreshold(false) : changeWithinThreshold(true);
-  }
-
 
   return (
     <div>
@@ -48,8 +60,8 @@ const App = () => {
       </Navbar>
       {withinThreshold ? <></> :
       <div>
-        <ToastContainer position='middle-end'>
-          <Toast show={show} onClose={toggleSetShow}>
+        <ToastContainer position='top-end'>
+          <Toast show={show} onClose={toggleSetShow} className='notif'>
             <Toast.Header>
               <strong className="me-auto">Warning</strong>
               <small>Time mins ago</small>
@@ -62,7 +74,7 @@ const App = () => {
       
       <div style={{ width: 700 }}>
         {temps.length > 0 ? <Graph temps={temps} threshUpper={threshUpper} changeThreshUpper={changeThreshUpper} 
-        threshLower={threshLower} changeThreshLower={changeThreshLower} checkThreshold={checkThreshold}/> : <></>}
+        threshLower={threshLower} changeThreshLower={changeThreshLower} checkThreshold={checkThreshold} poll={poll}/> : <></>}
       </div>
     </div>
   );
