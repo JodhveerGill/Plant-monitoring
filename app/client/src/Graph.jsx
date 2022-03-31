@@ -1,93 +1,83 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import Button from 'react-bootstrap/Button';
-import { PlaceholderButton } from 'react-bootstrap';
 
 const Graph = (props) => {
+
   useEffect(() => {
-    var ctx = document.getElementById('myChart');
+    let time = [];
+    props.dates.forEach(date => time.push(date.substring(11, 19)))
+    var ctx = document.getElementById(`${props.name}chart`);
     const myChart = new Chart(ctx, {
       type: 'line',
       data: {
-        labels: [
-          'January',
-          'February',
-          'March',
-          'April',
-          'May',
-          'June',
-          'July',
-          'August',
-          'September',
-          'October'
-        ],
+        labels: time,
         datasets: [{
-          label: 'temp',
+          label: props.name,
           backgroundColor: 'rgb(255, 99, 132)',
           borderColor: 'rgb(255, 99, 132)',
-          data: props.temps,
+          data: props.data
         }]
       },
       options: {
         scales: {
+          x: {
+
+          },
           y: {
             beginAtZero: true
+          }
+        },
+        plugins: {
+          legend: {
+            display: true,
+            align: 'end'
           }
         }
       }
     })
-    props.poll(myChart);
-    }, []);
+    props.poll(myChart, props.name);
+  }, []);
 
+  const threshUpper = 'upper' + props.name;
+  const threshLower = 'lower' + props.name;
 
-    // function addData(myChart, label, data) {
-    //   //chart.data.labels.push(label);
-    //   myChart.data.datasets.forEach((dataset) => {
-    //       dataset.data.push(data);
-    //   });
-    //   chart.update();
-    // }
+  const handleUpperChange = (event) => {
+    props.changeThreshUpper(event.target.value);
+  };
+  const handleUpperSubmit = (event) => {
+    //call save
+    axios.post(`/thresh?value=${document.getElementById(event.target.name).value}&name=${event.target.name}`).then((res) => console.log('save thresh'));
+    props.checkThreshold(props.name, props.threshUpper, props.threshLower, props.data[props.data.length - 1]);
 
-    const handleUpperChange = (event) => {
-      props.changeThreshUpper(event.target.value);
-    };
-    const handleUpperSubmit = (event) => {
-      //call save
-      document.getElementById(event.target.name).value
-      axios.post(`/thresh?value=${document.getElementById(event.target.name).value}&name=${event.target.name}`).then((res) => console.log(''));
-      props.checkThreshold(props.threshUpper, props.threshLower, props.temps[props.temps.length - 1]);
+    event.preventDefault();
+  }
 
-      event.preventDefault();
-    }
+  const handleLowerChange = (event) => {
+    props.changeThreshLower(event.target.value);
+  };
 
-    const handleLowerChange = (event) => {
-      props.changeThreshLower(event.target.value);
-    };
-
-    // const handleLowerSubmit = (event) => {
-    //   event.preventDefault();
-    //   axios.post('/thresh', props.threshLower).then((res) => console.log(res.data));
-    // }
 
   return (
-    <div>
-      <h3>Temperature Graph</h3>
-      <canvas id="myChart"></canvas>
-      <div>
-        <form>
-        <label>
-          Upper Threshold: <input id="upperTemp" type="number" value={props.threshUpper} onChange={handleUpperChange}/>
-        </label>
-        <Button variant="primary" name="upperTemp" onClick={handleUpperSubmit}>Save</Button>
-        <label>
-          Lower Threshold: <input id="lowerTemp" type="number" value={props.threshLower} onChange={handleLowerChange}/>
-          <Button variant="primary" name="lowerTemp" onClick={handleUpperSubmit}>Save</Button>
-        </label>
-      </form>
+    <div className='graph'>
+      <div className='graphChild'>
+        <h3 className='header'>{props.title}</h3>
+        <canvas id={`${props.name}chart`}></canvas>
+      </div>
+      <div className='graphChild'>
+        <form className='form'>
+          <label className='input'>
+            Upper Threshold: <input id={threshUpper} type="number" value={props.threshUpper} onChange={handleUpperChange} />
+          </label>
+          <Button variant="primary" name={threshUpper} onClick={handleUpperSubmit}>Save</Button>
+          <label className='input'>
+            Lower Threshold: <input id={threshLower} type="number" value={props.threshLower} onChange={handleLowerChange} />
+          </label>
+          <Button variant="primary" name={threshLower} onClick={handleUpperSubmit}>Save</Button>
+        </form>
       </div>
     </div>
   );
 }
-
 
 export default Graph;

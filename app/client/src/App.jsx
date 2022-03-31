@@ -7,40 +7,120 @@ import axios from 'axios';
 
 const App = () => {
   const [temps, changeTemps] = useState([]);
-  const [threshUpper, changeThreshUpper] = useState(10);
-  const [threshLower, changeThreshLower] = useState(0);
-  const [withinThreshold, changeWithinThreshold] = useState(true);
+  const [tempDates, changeTempDates] = useState([])
+  const [humidity, changeHumidity] = useState([]);
+  const [humidDates, changeHumidDates] = useState([])
+  const [tempUpper, changeTempUpper] = useState(30);
+  const [tempLower, changeTempLower] = useState(0);
+  const [humidUpper, changeHumidUpper] = useState(30);
+  const [humidLower, changeHumidLower] = useState(0);
+  const [tempUpState, changeTempUpState] = useState(false);
+  const [tempLowState, changeTempLowState] = useState(false);
+  const [humidUpState, changeHumidUpState] = useState(false);
+  const [humidLowState, changeHumidLowState] = useState(false);
+  const [notifications, changeNotifications] = useState([])
 
   useEffect(() => {
-    axios.get('/test').then(res => { 
+    axios.get('/getData', { params: { name: 'Temp' } }).then(res => {
+      changeTempDates(res.data.map((date) => date.timestamp));
       changeTemps(res.data.map((val) => val.value));
     });
   }, []);
 
-  function poll(chart) {
+  useEffect(() => {
+    axios.get('/getData', { params: { name: 'Humidity' } }).then(res => {
+      changeHumidDates(res.data.map((date) => date.timestamp));
+      changeHumidity(res.data.map((val) => val.value));
+    });
+  }, []);
+
+  function poll(chart, name) {
+    var oldTemp = [0]
+    var oldHumid = [0]
     setInterval(() => {
-      axios.get('/test').then(res => {
-        changeTemps(res.data.map((val) => val.value));
-        chart.data.datasets.forEach((dataset) => {
-          dataset.data = res.data.map((val) => val.value);
+      axios.get('/getData', { params: { name: name } }).then(res => {
+        if (name == 'Temp') {
+          var cur = res.data.map((val) => val.value)
+          if (cur.toString() !== oldTemp.toString()) {
+            oldTemp = cur;
+            changeTemps(cur);
+            chart.data.datasets.forEach((dataset) => {
+              dataset.data = cur;
+            });
+            chart.data.labels = res.data.map((dates) => dates.timestamp.substring(11, 19));
+            changeTempUpState(false);
+            changeTempLowState(false)
+          }
+        }
+        if (name == 'Humidity') {
+          var cur = res.data.map((val) => val.value)
+          if (cur.toString() !== oldHumid.toString()) {
+            oldHumid = cur;
+            changeHumidity(cur);
+            chart.data.datasets.forEach((dataset) => {
+              dataset.data = res.data.map((val) => val.value);
+            });
+            chart.data.labels = res.data.map((dates) => dates.timestamp.substring(11, 19));
+            changeHumidUpState(false);
+            changeHumidLowState(false);
+          }
+        }
+
       });
-      });
-      console.log('poll');
-      
+      //console.log('poll');
       chart.update();
     }, 10000);
   }
 
   useEffect(() => {
-    checkThreshold(threshUpper, threshLower, temps[temps.length - 1]);
+    checkThreshold('Temp', tempUpper, tempLower, temps[temps.length - 1]);
   }, [temps]);
 
-  const checkThreshold = (upperLimit, lowerLimit, value) => {
-    (value > upperLimit || value < lowerLimit) ? changeWithinThreshold(false) : changeWithinThreshold(true);
-}
+  useEffect(() => {
+    checkThreshold('Humidity', humidUpper, humidLower, humidity[humidity.length - 1]);
+  }, [humidity]);
+
+
+  const checkThreshold = (type, upperLimit, lowerLimit, value) => {
+    if (type == 'Temp') {
+      if (value > upperLimit && !tempUpState) {
+        changeTempUpState(true)
+        changeNotifications([...notifications, createWarning(type, 'over')])
+      }
+      if (value < lowerLimit && !tempLowState) {
+        changeTempLowState(true)
+        changeNotifications([...notifications, createWarning(type, 'under')])
+      }
+    } 
+    if (type == 'Humidity') {
+      if (value > upperLimit && !humidUpState) {
+        changeHumidUpState(true)
+        changeNotifications([...notifications, createWarning(type, 'over')])
+      }
+      if (value < lowerLimit && !humidLowState) {
+        changeHumidLowState(true)
+        changeNotifications([...notifications, createWarning(type, 'under')])
+      }
+    }
+  }
 
   const [show, setShow] = useState(true);
   const toggleSetShow = () => setShow(!show);
+
+  const createWarning = (type, overunder) => (
+    <Toast onClose={removeWarning.bind(this)} key={`${type} ${overunder}`}>
+      <Toast.Header>
+        <strong className="me-auto">Warning</strong>
+        <small>{`${Date.now()}`}</small>
+      </Toast.Header>
+      <Toast.Body>{`${type} is ${overunder} threshold`}</Toast.Body>
+    </Toast>
+  );
+
+  function removeWarning() {
+    changeNotifications(notifications.filter(i => i !== notifications.length -1))
+  }
+
 
   return (
     <div>
@@ -58,23 +138,17 @@ const App = () => {
           </Row>
         </Container>
       </Navbar>
-      {withinThreshold ? <></> :
-      <div>
-        <ToastContainer position='top-end'>
-          <Toast show={show} onClose={toggleSetShow} className='notif'>
-            <Toast.Header>
-              <strong className="me-auto">Warning</strong>
-              <small>Time mins ago</small>
-            </Toast.Header>
-            <Toast.Body>Warning message</Toast.Body>
-          </Toast>
-        </ToastContainer>
-      </div> 
-    }
-      
-      <div style={{ width: 700 }}>
-        {temps.length > 0 ? <Graph temps={temps} threshUpper={threshUpper} changeThreshUpper={changeThreshUpper} 
-        threshLower={threshLower} changeThreshLower={changeThreshLower} checkThreshold={checkThreshold} poll={poll}/> : <></>}
+      <ToastContainer className='notif' position='top-end'>
+        {notifications}
+      </ToastContainer>
+      <div style={{ width: '75%' }}>
+        {temps.length > 0 ? <Graph title='Temperature Graph' data={temps} dates={tempDates} threshUpper={tempUpper} changeThreshUpper={changeTempUpper}
+          threshLower={tempLower} changeThreshLower={changeTempLower} checkThreshold={checkThreshold} poll={poll} name='Temp' /> : <></>}
+      </div>
+
+      <div style={{ width: '75%' }}>
+        {humidity.length > 0 ? <Graph title='Humidity Graph' data={humidity} dates={humidDates} threshUpper={humidUpper} changeThreshUpper={changeHumidUpper}
+          threshLower={humidLower} changeThreshLower={changeHumidLower} checkThreshold={checkThreshold} poll={poll} name='Humidity' /> : <></>}
       </div>
     </div>
   );
