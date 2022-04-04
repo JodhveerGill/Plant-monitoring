@@ -107,15 +107,18 @@ const App = () => {
   const [show, setShow] = useState(true);
   const toggleSetShow = () => setShow(!show);
 
-  const createWarning = (type, overunder) => (
+  const createWarning = (type, overunder) => {
+    let curTime = new Date();
+    curTime = curTime.toLocaleString()
+    return(
     <Toast onClose={removeWarning.bind(this)} key={`${type} ${overunder}`}>
       <Toast.Header>
-        <strong className="me-auto">Warning</strong>
-        <small>{`${Date.now()}`}</small>
+        <strong className="me-auto" style={{color:"red"}}>Warning</strong>
+        <small>{`${curTime}`}</small>
       </Toast.Header>
       <Toast.Body>{`${type} is ${overunder} threshold`}</Toast.Body>
     </Toast>
-  );
+    )};
 
   function removeWarning() {
     changeNotifications(notifications.filter(i => i !== notifications.length -1))
@@ -138,7 +141,7 @@ const App = () => {
           </Row>
         </Container>
       </Navbar>
-      <ToastContainer className='notif' position='top-end'>
+      <ToastContainer className='notif' position='top-end' show={show}>
         {notifications}
       </ToastContainer>
       <div style={{ width: '75%' }}>
